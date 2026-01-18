@@ -16,6 +16,7 @@ class CreateRestaurantViewmodel extends ChangeNotifier {
     bool isVisited = false,
     int? rating,
     String? notes,
+    PriceRange? priceRange,
     double latitude = 0.0,
     double longitude = 0.0,
   }) async {
@@ -38,6 +39,7 @@ class CreateRestaurantViewmodel extends ChangeNotifier {
         isVisited: isVisited,
         rating: rating,
         notes: notes,
+        priceRange: priceRange,
       );
 
       await _repository.insertRestaurant(restaurant);

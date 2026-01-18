@@ -2,26 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'features/home/viewmodel/home_viewModel.dart';
+import 'core/services/settings_service.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inicializar configuración
+  final settingsService = SettingsService();
+  await settingsService.init();
+  
+  runApp(MyApp(settingsService: settingsService));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final SettingsService settingsService;
+  
+  const MyApp({super.key, required this.settingsService});
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(providers:   [
-      ChangeNotifierProvider(create: (_) => HomeViewmodel()),
-      // Add your providers here
-    ], child: MaterialApp.router(
-      title: 'Flutter App',
-      theme: AppTheme.lightTheme,
-      routerConfig: AppRouter.router,
-      debugShowCheckedModeBanner: false,
-    ));
+    return ChangeNotifierProvider.value(
+      value: settingsService,
+      child: Consumer<SettingsService>(
+        builder: (context, settings, child) {
+          return MaterialApp.router(
+            title: 'Raco',
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: settings.themeMode,
+            routerConfig: AppRouter.router,
+            debugShowCheckedModeBanner: false,
+          );
+        },
+      ),
+    );
   }
 }
-

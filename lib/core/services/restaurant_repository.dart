@@ -171,4 +171,76 @@ class RestaurantRepository {
     final db = await _databaseService.database;
     await db.delete('restaurants');
   }
+
+  // Obtener estadísticas
+  Future<RestaurantStats> getStats() async {
+    final db = await _databaseService.database;
+    
+    final totalResult = await db.rawQuery('SELECT COUNT(*) as count FROM restaurants');
+    final total = Sqflite.firstIntValue(totalResult) ?? 0;
+    
+    final visitedResult = await db.rawQuery('SELECT COUNT(*) as count FROM restaurants WHERE is_visited = 1');
+    final visited = Sqflite.firstIntValue(visitedResult) ?? 0;
+    
+    final pendingResult = await db.rawQuery('SELECT COUNT(*) as count FROM restaurants WHERE is_visited = 0');
+    final pending = Sqflite.firstIntValue(pendingResult) ?? 0;
+    
+    final favoritesResult = await db.rawQuery('SELECT COUNT(*) as count FROM restaurants WHERE is_favorite = 1');
+    final favorites = Sqflite.firstIntValue(favoritesResult) ?? 0;
+    
+    final avgRatingResult = await db.rawQuery('SELECT AVG(rating) as avg FROM restaurants WHERE rating IS NOT NULL');
+    final avgRating = avgRatingResult.first['avg'] as double?;
+    
+    // Categorías más usadas
+    final allRestaurants = await getAllRestaurants();
+    final tagCount = <String, int>{};
+    for (final r in allRestaurants) {
+      for (final tag in r.tags) {
+        if (tag.isNotEmpty) {
+          tagCount[tag] = (tagCount[tag] ?? 0) + 1;
+        }
+      }
+    }
+    final topTags = tagCount.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    
+    // Distribución de precios
+    final priceDistribution = <int, int>{};
+    for (final r in allRestaurants) {
+      if (r.priceRange != null) {
+        priceDistribution[r.priceRange!.index] = 
+          (priceDistribution[r.priceRange!.index] ?? 0) + 1;
+      }
+    }
+    
+    return RestaurantStats(
+      total: total,
+      visited: visited,
+      pending: pending,
+      favorites: favorites,
+      averageRating: avgRating,
+      topTags: topTags.take(5).map((e) => MapEntry(e.key, e.value)).toList(),
+      priceDistribution: priceDistribution,
+    );
+  }
+}
+
+class RestaurantStats {
+  final int total;
+  final int visited;
+  final int pending;
+  final int favorites;
+  final double? averageRating;
+  final List<MapEntry<String, int>> topTags;
+  final Map<int, int> priceDistribution;
+
+  RestaurantStats({
+    required this.total,
+    required this.visited,
+    required this.pending,
+    required this.favorites,
+    this.averageRating,
+    required this.topTags,
+    required this.priceDistribution,
+  });
 }

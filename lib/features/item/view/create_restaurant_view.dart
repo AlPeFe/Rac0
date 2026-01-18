@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:raco/features/item/viewmodel/create_restaurant_viewmodel.dart';
+import 'package:raco/core/models/restaurant_model.dart';
 
 class CreateRestaurantView extends StatefulWidget {
   const CreateRestaurantView({super.key});
@@ -18,6 +19,8 @@ class _CreateRestaurantViewState extends State<CreateRestaurantView> {
   final _notesController = TextEditingController();
   bool _isVisited = false;
   int? _rating;
+  PriceRange? _priceRange;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -34,10 +37,10 @@ class _CreateRestaurantViewState extends State<CreateRestaurantView> {
       create: (_) => CreateRestaurantViewmodel(),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Add Restaurant'),
+          title: const Text('Añadir restaurante'),
           leading: IconButton(
             icon: const Icon(Icons.close),
-            onPressed: () => context.pop(false),
+            onPressed: () => context.go('/home'),
           ),
         ),
         body: SafeArea(
@@ -53,14 +56,14 @@ class _CreateRestaurantViewState extends State<CreateRestaurantView> {
                       TextFormField(
                         controller: _nameController,
                         decoration: const InputDecoration(
-                          labelText: 'Restaurant Name',
-                          hintText: 'Enter restaurant name',
+                          labelText: 'Nombre del restaurante',
+                          hintText: 'Introduce el nombre',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.restaurant),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter a name';
+                            return 'Por favor introduce un nombre';
                           }
                           return null;
                         },
@@ -69,14 +72,14 @@ class _CreateRestaurantViewState extends State<CreateRestaurantView> {
                       TextFormField(
                         controller: _addressController,
                         decoration: const InputDecoration(
-                          labelText: 'Address',
-                          hintText: 'Enter address',
+                          labelText: 'Dirección',
+                          hintText: 'Introduce la dirección',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.location_on),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter an address';
+                            return 'Por favor introduce una dirección';
                           }
                           return null;
                         },
@@ -86,17 +89,55 @@ class _CreateRestaurantViewState extends State<CreateRestaurantView> {
                       TextFormField(
                         controller: _tagsController,
                         decoration: const InputDecoration(
-                          labelText: 'Tags',
-                          hintText: 'e.g., Italian, Pizza, Pasta',
+                          labelText: 'Categorías',
+                          hintText: 'Ej: Italiana, Pizza, Pasta',
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.label),
-                          helperText: 'Separate tags with commas',
+                          helperText: 'Separa las categorías con comas',
                         ),
                       ),
                       const SizedBox(height: 16),
+                      
+                      // Rango de precios
+                      const Text(
+                        'Rango de precios',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: PriceRange.values.map((price) {
+                          final isSelected = _priceRange == price;
+                          return ChoiceChip(
+                            label: Text(price.display),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              setState(() {
+                                _priceRange = selected ? price : null;
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      if (_priceRange != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            _priceRange!.label,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      
+                      const SizedBox(height: 16),
                       SwitchListTile(
-                        title: const Text('Mark as visited'),
-                        subtitle: const Text('Already been to this restaurant?'),
+                        title: const Text('Marcar como visitado'),
+                        subtitle: const Text('¿Ya has ido a este restaurante?'),
                         value: _isVisited,
                         onChanged: (value) {
                           setState(() {
@@ -110,7 +151,7 @@ class _CreateRestaurantViewState extends State<CreateRestaurantView> {
                       if (_isVisited) ...[
                         const SizedBox(height: 16),
                         const Text(
-                          'Rating',
+                          'Valoración',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
@@ -141,8 +182,8 @@ class _CreateRestaurantViewState extends State<CreateRestaurantView> {
                         TextFormField(
                           controller: _notesController,
                           decoration: const InputDecoration(
-                            labelText: 'Notes',
-                            hintText: 'Add your thoughts about this restaurant',
+                            labelText: 'Notas',
+                            hintText: 'Añade tus comentarios sobre este restaurante',
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.note),
                           ),
@@ -151,10 +192,15 @@ class _CreateRestaurantViewState extends State<CreateRestaurantView> {
                       ],
                       const SizedBox(height: 32),
                       ElevatedButton(
-                        onPressed: viewModel.isLoading
+                        onPressed: (viewModel.isLoading || _isSubmitting)
                             ? null
                             : () async {
                                 if (_formKey.currentState!.validate()) {
+                                  if (_isSubmitting) return;
+                                  setState(() {
+                                    _isSubmitting = true;
+                                  });
+
                                   final tags = _tagsController.text
                                       .split(',')
                                       .map((e) => e.trim())
@@ -171,17 +217,24 @@ class _CreateRestaurantViewState extends State<CreateRestaurantView> {
                                     notes: _notesController.text.isEmpty
                                         ? null
                                         : _notesController.text,
+                                    priceRange: _priceRange,
                                   );
 
-                                  if (success && context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content:
-                                            Text('Restaurant added successfully'),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
-                                    context.pop(true);
+                                  if (context.mounted) {
+                                    if (success) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content:
+                                              Text('Restaurante añadido correctamente'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                      context.go('/home');
+                                    } else {
+                                      setState(() {
+                                        _isSubmitting = false;
+                                      });
+                                    }
                                   }
                                 }
                               },
@@ -191,7 +244,7 @@ class _CreateRestaurantViewState extends State<CreateRestaurantView> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: viewModel.isLoading
+                        child: (viewModel.isLoading || _isSubmitting)
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
@@ -200,7 +253,7 @@ class _CreateRestaurantViewState extends State<CreateRestaurantView> {
                                 ),
                               )
                             : const Text(
-                                'Add Restaurant',
+                                'Añadir restaurante',
                                 style: TextStyle(fontSize: 16),
                               ),
                       ),

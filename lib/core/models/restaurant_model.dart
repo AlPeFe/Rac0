@@ -1,3 +1,43 @@
+/// Enum para representar el rango de precios
+enum PriceRange {
+  low,    // €
+  medium, // €€
+  high,   // €€€
+  veryHigh; // €€€€
+
+  String get display {
+    switch (this) {
+      case PriceRange.low:
+        return '€';
+      case PriceRange.medium:
+        return '€€';
+      case PriceRange.high:
+        return '€€€';
+      case PriceRange.veryHigh:
+        return '€€€€';
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case PriceRange.low:
+        return 'Económico';
+      case PriceRange.medium:
+        return 'Moderado';
+      case PriceRange.high:
+        return 'Caro';
+      case PriceRange.veryHigh:
+        return 'Muy caro';
+    }
+  }
+
+  static PriceRange? fromInt(int? value) {
+    if (value == null) return null;
+    if (value < 0 || value >= PriceRange.values.length) return null;
+    return PriceRange.values[value];
+  }
+}
+
 class Restaurant {
   final String id;
   final String name;
@@ -8,8 +48,9 @@ class Restaurant {
   final DateTime addedAt;
   final bool isVisited;
   final bool isFavorite;
-  final int? rating; // 1-10, null si no hay valoración
+  final int? rating; // 1-5, null si no hay valoración
   final String? notes; // Notas del usuario
+  final PriceRange? priceRange; // Rango de precios
 
   Restaurant({
     required this.id,
@@ -23,8 +64,9 @@ class Restaurant {
     this.isFavorite = false,
     this.rating,
     this.notes,
-  }) : assert(rating == null || (rating >= 1 && rating <= 10),
-             'Rating debe estar entre 1 y 10');
+    this.priceRange,
+  }) : assert(rating == null || (rating >= 1 && rating <= 5),
+             'Rating debe estar entre 1 y 5');
 
 
   factory Restaurant.fromMap(Map<String, dynamic> map) {
@@ -34,12 +76,13 @@ class Restaurant {
       address: map['address'] as String,
       latitude: map['latitude'] as double,
       longitude: map['longitude'] as double,
-      tags: (map['tags'] as String).split(','),
+      tags: (map['tags'] as String).split(',').where((t) => t.isNotEmpty).toList(),
       addedAt: DateTime.parse(map['added_at'] as String),
       isVisited: (map['is_visited'] as int) == 1,
       isFavorite: (map['is_favorite'] as int?) == 1,
       rating: map['rating'] as int?,
       notes: map['notes'] as String?,
+      priceRange: PriceRange.fromInt(map['price_range'] as int?),
     );
   }
 
@@ -57,10 +100,11 @@ class Restaurant {
       'is_favorite': isFavorite ? 1 : 0,
       'rating': rating,
       'notes': notes,
+      'price_range': priceRange?.index,
     };
   }
 
-  // Constructor para crear desde JSON (útil para API)
+  // Constructor para crear desde JSON (útil para backup/restore)
   factory Restaurant.fromJson(Map<String, dynamic> json) {
     return Restaurant(
       id: json['id'] as String,
@@ -74,10 +118,11 @@ class Restaurant {
       isFavorite: json['isFavorite'] as bool? ?? false,
       rating: json['rating'] as int?,
       notes: json['notes'] as String?,
+      priceRange: PriceRange.fromInt(json['priceRange'] as int?),
     );
   }
 
-  // Convertir a JSON (útil para API)
+  // Convertir a JSON (útil para backup/restore)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -86,11 +131,12 @@ class Restaurant {
       'latitude': latitude,
       'longitude': longitude,
       'tags': tags,
-      'added_at': addedAt.toIso8601String(),
-      'is_visited': isVisited,
-      'is_favorite': isFavorite,
+      'addedAt': addedAt.toIso8601String(),
+      'isVisited': isVisited,
+      'isFavorite': isFavorite,
       'rating': rating,
       'notes': notes,
+      'priceRange': priceRange?.index,
     };
   }
 
@@ -107,6 +153,10 @@ class Restaurant {
     bool? isFavorite,
     int? rating,
     String? notes,
+    PriceRange? priceRange,
+    bool clearRating = false,
+    bool clearNotes = false,
+    bool clearPriceRange = false,
   }) {
     return Restaurant(
       id: id ?? this.id,
@@ -118,14 +168,15 @@ class Restaurant {
       addedAt: addedAt ?? this.addedAt,
       isVisited: isVisited ?? this.isVisited,
       isFavorite: isFavorite ?? this.isFavorite,
-      rating: rating ?? this.rating,
-      notes: notes ?? this.notes,
+      rating: clearRating ? null : (rating ?? this.rating),
+      notes: clearNotes ? null : (notes ?? this.notes),
+      priceRange: clearPriceRange ? null : (priceRange ?? this.priceRange),
     );
   }
 
   @override
   String toString() {
-    return 'Restaurant(id: $id, name: $name, address: $address, lat: $latitude, lng: $longitude, tags: $tags, addedAt: $addedAt, isVisited: $isVisited, isFavorite: $isFavorite, rating: $rating, notes: $notes)';
+    return 'Restaurant(id: $id, name: $name, address: $address, lat: $latitude, lng: $longitude, tags: $tags, addedAt: $addedAt, isVisited: $isVisited, isFavorite: $isFavorite, rating: $rating, notes: $notes, priceRange: $priceRange)';
   }
 
   @override
@@ -143,7 +194,8 @@ class Restaurant {
       other.isVisited == isVisited &&
       other.isFavorite == isFavorite &&
       other.rating == rating &&
-      other.notes == notes;
+      other.notes == notes &&
+      other.priceRange == priceRange;
   }
 
   @override
@@ -160,6 +212,7 @@ class Restaurant {
       isFavorite,
       rating,
       notes,
+      priceRange,
     );
   }
 }

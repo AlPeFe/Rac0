@@ -4,6 +4,7 @@ import '../../features/visited/view/visited_view.dart';
 import '../../features/home/view/home_view.dart';
 import '../../features/item/view/create_restaurant_view.dart';
 import '../../features/item/view/restaurant_detail_view.dart';
+import '../../features/settings/view/settings_view.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -41,6 +42,11 @@ class AppRouter {
               final id = state.pathParameters['id']!;
               return RestaurantDetailView(restaurantId: id);
             },
+          ),
+          GoRoute(
+            path: '/settings',
+            name: 'settings',
+            builder: (context, state) => const SettingsView(),
           ),
         ],
       ),

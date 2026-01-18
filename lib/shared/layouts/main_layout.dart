@@ -32,7 +32,8 @@ class MainLayout extends StatelessWidget {
               context.go('/home');
               break;
             case 1:
-              context.push('/create');
+              // Use go instead of push to prevent stacking multiple create screens
+              context.go('/create');
               break;
             case 2:
               context.go('/visited');
